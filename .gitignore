@@ -1,0 +1,63 @@
+# -------------------------
+# Python
+# -------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtualenv / env
+.venv/
+venv/
+ENV/
+env/
+
+# -------------------------
+# FastAPI / tooling caches
+# -------------------------
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# -------------------------
+# Build artifacts
+# -------------------------
+build/
+dist/
+*.egg-info/
+
+# -------------------------
+# Environment files (NO subir secretos)
+# -------------------------
+.env
+.env.*
+!.env.example
+
+# Si tu .env está dentro de backend/
+backend/.env
+backend/.env.*
+
+# -------------------------
+# Logs
+# -------------------------
+*.log
+logs/
+
+# -------------------------
+# OS / Editor
+# -------------------------
+.DS_Store
+Thumbs.db
+
+# VSCode: ignoro todo excepto lo que vale la pena compartir
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+
+# -------------------------
+# Docker local stuff
+# -------------------------
+**/.dockerignore
