@@ -1,32 +1,52 @@
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
-import os
+from typing import Iterable, Callable
 
-from app.api.auth.security import JWT_ALG, JWT_SECRET
-from app.db.session import SessionLocal  # ajustá a tu proyecto
-from app.models.users import User         # ajustá import según tu layout
+from app.core.security import JWT_ALG, JWT_SECRET
+from app.models.users import User
+from app.db.deps import get_db
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+bearer_scheme = HTTPBearer()
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
+def get_current_user(
+    creds: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+) -> User:
+    token = creds.credentials
+
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
         user_id = payload.get("sub")
-        if not user_id:
-            raise ValueError("missing sub")
+        token_tenant_id = payload.get("tenant_id")
+
+        if not user_id or token_tenant_id is None:
+            raise ValueError("missing claims")
+
     except (JWTError, ValueError):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        raise HTTPException(status_code=401, detail="Invalid token")
 
     user = db.get(User, int(user_id))
+
     if not user or not user.is_active:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive or missing user")
+        raise HTTPException(status_code=401, detail="Inactive or missing user")
+
+    if int(user.tenant_id) != int(token_tenant_id):
+        raise HTTPException(status_code=401, detail="Invalid token")
+
     return user
+
+def require_roles(allowed: Iterable[str]) -> Callable:
+    allowed_set = set(allowed)
+
+    def _dep(current_user: User = Depends(get_current_user)) -> User:
+        if current_user.role not in allowed_set:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not enough permissions",
+            )
+        return current_user
+
+    return _dep

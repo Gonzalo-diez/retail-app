@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import Optional
 
 class RegisterIn(BaseModel):
@@ -7,6 +7,7 @@ class RegisterIn(BaseModel):
     password: str
 
 class LoginIn(BaseModel):
+    tenant_name: str
     email: EmailStr
     password: str
 
@@ -20,3 +21,5 @@ class UserOut(BaseModel):
     email: EmailStr
     role: str
     is_active: bool
+    
+    model_config = ConfigDict(from_attributes=True)

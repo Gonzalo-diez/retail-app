@@ -14,7 +14,7 @@ def register(payload: RegisterIn, db: Session = Depends(get_db)):
 
 @auth_router.post("/login", response_model=TokenOut)
 def do_login(payload: LoginIn, db: Session = Depends(get_db)):
-    token = login(db, payload.email, payload.password)
+    token = login(db, payload.tenant_name, payload.email, payload.password)
     return {"access_token": token}
 
 @auth_router.get("/me", response_model=UserOut)
