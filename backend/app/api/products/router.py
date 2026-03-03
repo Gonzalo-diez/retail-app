@@ -3,12 +3,13 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, get_current_user, require_roles
 from app.models.users import User
+from app.schemas.page import Page
 from .schemas import ProductCreate, ProductUpdate, ProductOut
 from .service import create_product, list_products, get_product, update_product, delete_product
 
 product_router = APIRouter()
 
-@product_router.get("/", response_model=list[ProductOut])
+@product_router.get("/", response_model=Page[ProductOut])
 def products_list(
     q: str | None = Query(default=None, description="Search: sku/name/barcode/brand/category"),
     page: int = Query(default=1, ge=1),
@@ -40,7 +41,7 @@ def products_create(
     return create_product(db, tenant_id=current_user.tenant_id, product_in=payload)
 
 
-@product_router.patch("/{product_id}", response_model=ProductOut)
+@product_router.patch("/{product_id}", response_model=ProductOut, dependencies=[Depends(require_roles(["admin", "manager"]))])
 def products_update(
     product_id: int,
     payload: ProductUpdate,

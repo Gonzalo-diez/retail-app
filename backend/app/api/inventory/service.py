@@ -1,11 +1,26 @@
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy import func, and_
 from app.models.inventory_snapshots import InventorySnapshot
+from app.models.stores import Store
 
 def bulk_upsert_snapshots(db: Session, tenant_id: int, rows: list[dict]) -> int:
     if not rows:
         return 0
+    
+    store_ids = {r["store_id"] for r in rows if r.get("store_id") is not None}
+    if store_ids:
+        ok = (
+            db.query(Store.id)
+            .filter(Store.tenant_id == tenant_id, Store.id.in_(store_ids))
+            .all()
+        )
+        ok_ids = {x[0] for x in ok}
+        missing = store_ids - ok_ids
+        if missing:
+            raise HTTPException(status_code=404, detail=f"Store not found: {sorted(missing)}")
+    
     for r in rows:
         r["tenant_id"] = tenant_id
 
@@ -19,6 +34,10 @@ def bulk_upsert_snapshots(db: Session, tenant_id: int, rows: list[dict]) -> int:
     return len(rows)
 
 def get_current_stock(db: Session, tenant_id: int, store_id: int, limit: int = 500):
+    store = db.query(Store).filter(Store.id == store_id, Store.tenant_id == tenant_id).first()
+    if not store:
+        raise HTTPException(status_code=404, detail="Store not found")
+    
     sub = (
         db.query(
             InventorySnapshot.sku.label("sku"),

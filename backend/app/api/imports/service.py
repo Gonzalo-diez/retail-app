@@ -1,7 +1,9 @@
 from fastapi import HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-
+from app.schemas.page import Page
+from app.api.imports.schemas import ImportRunOut
 from app.models.import_runs import ImportRun
 from app.models.import_errors import ImportError
 from app.models.column_mappings import ColumnMapping
@@ -14,14 +16,24 @@ ALLOWED_FIELDS = {
     "inventory": {"sku", "snapshot_time", "stock_qty"},
 }
 
-def list_runs(db: Session, tenant_id: int, limit: int = 50):
-    return (
-        db.query(ImportRun)
-        .filter(ImportRun.tenant_id == tenant_id)
-        .order_by(ImportRun.id.desc())
-        .limit(limit)
+def list_runs(db: Session, *, q: str | None = None, tenant_id: int, page: int, size: int):
+    base = db.query(ImportRun).filter(ImportRun.tenant_id == tenant_id)
+
+    if q:
+        like = f"%{q.strip()}%"
+        base = base.filter(ImportRun.original_filename.ilike(like))
+
+    total = base.with_entities(func.count(ImportRun.id)).scalar() or 0
+
+    items = (
+        base.order_by(ImportRun.id.desc())
+        .offset((page - 1) * size)
+        .limit(size)
         .all()
     )
+
+    items_out = [ImportRunOut.model_validate(x, from_attributes=True) for x in items]
+    return Page[ImportRunOut].build(items=items_out, page=page, size=size, total=total)
 
 def get_run(db: Session, tenant_id: int, run_id: int) -> ImportRun | None:
     return db.query(ImportRun).filter(ImportRun.tenant_id == tenant_id, ImportRun.id == run_id).first()

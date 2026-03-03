@@ -8,6 +8,11 @@ from app.models.stores import Store
 ALLOWED_STATUS = {"new", "seen", "dismissed", "done"}
 
 def list_recommendations(db: Session, tenant_id: int, store_id=None, status=None, type_=None, limit: int = 200):
+    if store_id is not None:
+        store = db.query(Store).filter(Store.id == store_id, Store.tenant_id == tenant_id).first()
+        if not store:
+            raise HTTPException(status_code=404, detail="Store not found")
+    
     q = db.query(Recommendation).filter(Recommendation.tenant_id == tenant_id)
     if store_id is not None:
         q = q.filter(Recommendation.store_id == store_id)

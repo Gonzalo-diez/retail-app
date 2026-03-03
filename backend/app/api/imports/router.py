@@ -3,7 +3,8 @@ from typing import Optional
 from pathlib import Path
 from fastapi import APIRouter, Depends, File, UploadFile, Form, HTTPException, Query
 from sqlalchemy.orm import Session
-
+from app.models.stores import Store
+from app.schemas.page import Page
 from app.api.deps import get_db, get_current_user, require_roles
 from app.models.users import User
 from app.tasks.queue import get_queue
@@ -22,13 +23,15 @@ UPLOAD_ROOT = "uploads"
 def _safe_name(name: str) -> str:
     return Path(name).name.replace("\\", "_").replace("/", "_")
 
-@import_router.get("/runs", response_model=list[ImportRunOut])
+@import_router.get("/runs", response_model=Page[ImportRunOut])
 def runs_list(
-    limit: int = Query(default=50, ge=1, le=200),
+    q: str | None = Query(default=None, description="Search: original filename"),
+    page: int = Query(default=1, ge=1),
+    size: int = Query(default=50, ge=1, le=200),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return list_runs(db, tenant_id=current_user.tenant_id, limit=limit)
+    return list_runs(db, q=q, page=page, size=size, tenant_id=current_user.tenant_id)
 
 @import_router.get("/runs/{run_id}", response_model=ImportRunOut)
 def runs_get(
@@ -61,6 +64,15 @@ def upload(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if store_id is not None:
+        store = (
+            db.query(Store)
+            .filter(Store.id == store_id, Store.tenant_id == current_user.tenant_id)
+            .first()
+        )
+        if not store:
+            raise HTTPException(status_code=404, detail="Store not found")
+    
     original = _safe_name(file.filename or "file")
     # crear run con file_path temporal
     run = create_run(

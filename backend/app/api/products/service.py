@@ -1,9 +1,10 @@
-from sqlalchemy import or_
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
+from app.schemas.page import Page
 from app.models.products import Product
-from app.api.products.schemas import ProductCreate, ProductUpdate
+from app.api.products.schemas import ProductCreate, ProductUpdate, ProductOut
 
 
 def create_product(db: Session, product_in: ProductCreate, tenant_id: int) -> Product:
@@ -40,28 +41,27 @@ def get_product(db: Session, product_id: int, tenant_id: int) -> Product | None:
     ).first()
 
 
-def list_products(db, tenant_id: int, q: str | None = None, page: int = 1, size: int = 50):
-    query = db.query(Product).filter(Product.tenant_id == tenant_id)
+def list_products(db: Session, *, tenant_id: int, page: int, size: int, q: str | None = None):
+    base = db.query(Product).filter(Product.tenant_id == tenant_id)
 
     if q:
-        like = f"%{q}%"
-        query = query.filter(
-            or_(
-                Product.sku.ilike(like),
-                Product.name.ilike(like),
-                Product.barcode.ilike(like),
-                Product.brand.ilike(like),
-                Product.category.ilike(like),
-            )
+        like = f"%{q.strip()}%"
+        base = base.filter(
+            (Product.name.ilike(like)) | (Product.sku.ilike(like))
         )
 
-    return (
-        query
-        .order_by(Product.id.desc())
+    total = base.with_entities(func.count(Product.id)).scalar() or 0
+
+    items = (
+        base.order_by(Product.id.desc())
         .offset((page - 1) * size)
         .limit(size)
         .all()
     )
+
+    # Si ProductOut es pydantic, FastAPI va a serializar.
+    items_out = [ProductOut.model_validate(x, from_attributes=True) for x in items]
+    return Page[ProductOut].build(items=items_out, page=page, size=size, total=total)
 
 
 def update_product(
