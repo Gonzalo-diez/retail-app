@@ -61,3 +61,61 @@ Thumbs.db
 # Docker local stuff
 # -------------------------
 **/.dockerignore
+
+# -------------------------
+# Node.js (para el frontend)
+# -------------------------
+**/node_modules/
+**/.pnp/
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# -------------------------
+# Testing coverage
+# -------------------------
+**/coverage/
+
+# -------------------------
+# Next.js
+# -------------------------
+**/.next/
+**/out/
+
+# -------------------------
+# Build output
+# -------------------------
+**/build/
+
+# -------------------------
+# Misc
+# -------------------------
+.DS_Store
+*.pem
+
+# -------------------------
+# Debug logs
+# -------------------------
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# --------------------------
+# Environment variables
+# --------------------------
+.env*
+
+# --------------------------
+# Vercel
+# --------------------------
+.vercel
+
+# -------------------------
+# TypeScript
+# -------------------------
+*.tsbuildinfo
+next-env.d.ts
