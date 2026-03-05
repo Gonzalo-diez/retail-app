@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
   const sp = useSearchParams();
   const next = sp.get("next") || "/";
 
+  const [tenant_name, setTenantName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,7 +27,7 @@ export default function LoginPage() {
       const r = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ tenant_name, email, password }),
       });
 
       const data = await r.json();
@@ -54,6 +56,11 @@ export default function LoginPage() {
 
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
           <div className="space-y-2">
+            <Label>Nombre</Label>
+            <Input value={tenant_name} onChange={(e) => setTenantName(e.target.value)} autoComplete="tenant name" />
+          </div>
+
+          <div className="space-y-2">
             <Label>Email</Label>
             <Input value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
           </div>
@@ -67,6 +74,13 @@ export default function LoginPage() {
               autoComplete="current-password"
             />
           </div>
+
+          <p className="text-sm text-center text-muted-foreground">
+            ¿No tenés cuenta?{" "}
+            <Link href="/register" className="underline">
+              Crear cuenta
+            </Link>
+          </p>
 
           <Button className="w-full" disabled={loading}>
             {loading ? "Ingresando..." : "Ingresar"}

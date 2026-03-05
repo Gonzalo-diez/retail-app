@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const cookieName = process.env.AUTH_COOKIE_NAME || "retail_session";
   const token = req.cookies.get(cookieName)?.value;
 
   const { pathname } = req.nextUrl;
 
-  const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/api/auth");
+  const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/register") || pathname.startsWith("/api/auth");
 
   // Si NO está logueado y quiere entrar a app → login
   if (!token && !isAuthRoute) {
